@@ -1,10 +1,4 @@
-from agents import (
-    search_agent,
-    summarizer_agent,
-    critic_agent,
-    get_embedding,
-    cosine_similarity
-)
+from agents import (search_agent,summarizer_agent, get_embedding, cosine_similarity)
 
 def main():
 
@@ -17,11 +11,7 @@ def main():
     print("\n📄 Summarizing Jobs...\n")
     summary = summarizer_agent(jobs)
     print(summary)
-
-    print("\n🧠 Evaluating Skill Match...\n")
-    analysis = critic_agent(summary)
-    print(analysis)
-
+    
     # Embedding-Based Similarity
     resume_text = "Python, Machine Learning, SQL, Power BI"
 
@@ -30,7 +20,7 @@ def main():
 
     similarity = cosine_similarity(resume_embedding, job_embedding)
 
-    print("\n📊 Embedding Match Score:")
+    print("\n Embedding Match Score:")
     print(f"{round(similarity * 100, 2)}%")
 
 
