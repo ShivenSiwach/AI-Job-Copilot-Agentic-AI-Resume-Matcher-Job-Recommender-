@@ -1,8 +1,6 @@
 import os
 import streamlit as st
 from pypdf import PdfReader
-from dotenv import load_dotenv
-from google import genai
 
 from agents import (
     search_agent,
@@ -13,44 +11,41 @@ from agents import (
     cosine_similarity
 )
 
-# Load local .env for local development
-load_dotenv()
-
-# Page config
+# -----------------------------
+# PAGE CONFIG
+# -----------------------------
 st.set_page_config(
     page_title="AI Job Copilot",
-    page_icon="🤖",
+    page_icon="📄",
     layout="wide"
 )
 
+# -----------------------------
+# LOAD GOOGLE API KEY SAFELY
+# -----------------------------
+GOOGLE_API_KEY = None
+
+try:
+    if "GOOGLE_API_KEY" in st.secrets:
+        GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+except Exception:
+    pass
+
+if not GOOGLE_API_KEY:
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if GOOGLE_API_KEY:
+    os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 # -----------------------------
-# Helper: Create Gemini Client
+# VALIDATE API KEY
 # -----------------------------
-def get_api_key():
-    # Safe access to Streamlit secrets
-    api_key = None
-
-    try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-    except Exception:
-        api_key = os.getenv("GOOGLE_API_KEY")
-
-    return api_key
-
-
-def get_client():
-    api_key = get_api_key()
-
-    if not api_key:
-        st.error("Missing GOOGLE_API_KEY. Add it in Streamlit secrets or local .env file.")
-        st.stop()
-
-    return genai.Client(api_key=api_key)
-
+if not GOOGLE_API_KEY:
+    st.error("Missing GOOGLE_API_KEY. Please set it in Streamlit secrets.")
+    st.stop()
 
 # -----------------------------
-# Helper: Extract text from PDF
+# HELPER: Extract text from PDF
 # -----------------------------
 def extract_text_from_pdf(uploaded_file):
     text = ""
@@ -63,17 +58,15 @@ def extract_text_from_pdf(uploaded_file):
 
     return text.strip()
 
-
 # -----------------------------
-# Header
+# UI HEADER
 # -----------------------------
 st.title("AI Job Copilot")
 st.subheader("AI Resume Matcher + Skill Gap Detector + Career Coach")
 st.markdown("---")
 
-
 # -----------------------------
-# Sidebar
+# SIDEBAR
 # -----------------------------
 st.sidebar.header("Job Search Settings")
 
@@ -91,9 +84,8 @@ st.sidebar.write("- Data Scientist Fresher")
 st.sidebar.markdown("---")
 st.sidebar.info("Upload your resume PDF and get AI-powered job matching + career guidance.")
 
-
 # -----------------------------
-# Upload Section
+# FILE UPLOAD
 # -----------------------------
 st.header("Upload Resume PDF")
 
@@ -115,9 +107,8 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Error reading PDF: {str(e)}")
 
-
 # -----------------------------
-# Analyze Button
+# ANALYZE BUTTON
 # -----------------------------
 analyze_button = st.button("Analyze Resume & Build Career Plan")
 
@@ -128,28 +119,21 @@ if analyze_button:
         st.warning("Resume text could not be extracted from the PDF.")
     else:
         try:
-            client = get_client()
-
-            # Step 1: Jobs
             with st.spinner("Searching for matching jobs..."):
-                jobs = search_agent(client, job_query)
+                jobs = search_agent(job_query)
 
-            # Step 2: Resume Analysis
             with st.spinner("Analyzing resume..."):
-                analysis = resume_agent(client, resume_text)
+                analysis = resume_agent(resume_text)
 
-            # Step 3: Skill Gap
             with st.spinner("Detecting skill gaps..."):
-                skill_gap = skill_gap_agent(client, resume_text, jobs)
+                skill_gap = skill_gap_agent(resume_text, jobs)
 
-            # Step 4: Roadmap
             with st.spinner("Building 30-day learning roadmap..."):
-                roadmap = learning_roadmap_agent(client, resume_text, jobs)
+                roadmap = learning_roadmap_agent(resume_text, jobs)
 
-            # Step 5: Embedding Score
             with st.spinner("Calculating semantic match score..."):
-                job_embedding = get_embedding(client, jobs)
-                resume_embedding = get_embedding(client, resume_text)
+                job_embedding = get_embedding(jobs)
+                resume_embedding = get_embedding(resume_text)
                 score = cosine_similarity(job_embedding, resume_embedding)
 
             match_percent = round(score * 100, 2)
@@ -157,7 +141,6 @@ if analyze_button:
             st.success("Analysis completed successfully!")
             st.markdown("---")
 
-            # Tabs for better UX
             tab1, tab2, tab3, tab4 = st.tabs([
                 "Jobs Found",
                 "Resume Analysis",
@@ -182,13 +165,10 @@ if analyze_button:
                 st.write(roadmap)
 
             st.markdown("---")
-
-            # Match score section
             st.subheader("Resume-Job Match Score")
             st.metric(label="Match Score", value=f"{match_percent}%")
             st.progress(min(max(match_percent / 100, 0.0), 1.0))
 
-            # Score interpretation
             if match_percent >= 80:
                 st.success("Excellent match! Your resume is strongly aligned.")
             elif match_percent >= 60:
@@ -197,4 +177,5 @@ if analyze_button:
                 st.warning("Low match. Improve your resume and target skills.")
 
         except Exception as e:
-            st.error(f"Something went wrong during analysis: {str(e)}")
+            st.error("Something went wrong while processing your request.")
+            st.exception(e)
