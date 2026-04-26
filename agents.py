@@ -1,7 +1,6 @@
 import time
 import numpy as np
 
-
 MODEL = "gemini-2.5-flash"
 EMBEDDING_MODEL = "gemini-embedding-001"
 
