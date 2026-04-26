@@ -1,23 +1,14 @@
-import os
 import time
 import numpy as np
-from dotenv import load_dotenv
-from google import genai
 
-# Load API key
-load_dotenv()
-
-client = genai.Client(
-    api_key=os.getenv("GOOGLE_API_KEY")
-)
 
 MODEL = "gemini-2.5-flash"
+EMBEDDING_MODEL = "gemini-embedding-001"
 
 
 # Retry wrapper for Gemini calls
-def generate_with_retry(prompt):
-
-    for attempt in range(3):
+def generate_with_retry(client, prompt, retries=3, delay=3):
+    for attempt in range(retries):
         try:
             response = client.models.generate_content(
                 model=MODEL,
@@ -25,18 +16,17 @@ def generate_with_retry(prompt):
             )
             return response.text
 
-        except Exception as e:
-            print(f"Model busy... retrying ({attempt+1}/3)")
-            time.sleep(3)
-
-    return "Model unavailable right now. Please try again later."
+        except Exception:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                return "Model unavailable right now. Please try again later."
 
 
 # Search agent
-def search_agent(query):
-
+def search_agent(client, query):
     prompt = f"""
-    Find 3 realistic Data Science / Machine Learning jobs in India for:
+    Find 3 realistic entry-level Data Science / Machine Learning / Data Analyst jobs relevant to this query:
 
     {query}
 
@@ -47,15 +37,13 @@ def search_agent(query):
     4. Experience Level
     5. Short Job Description
 
-    Keep it clean and readable.
+    Keep it clean, realistic, and recruiter-friendly.
     """
-
-    return generate_with_retry(prompt)
+    return generate_with_retry(client, prompt)
 
 
 # Resume analyzer agent
-def resume_agent(resume_text):
-
+def resume_agent(client, resume_text):
     prompt = f"""
     Analyze this resume and extract:
 
@@ -70,13 +58,11 @@ def resume_agent(resume_text):
 
     Keep the response structured and recruiter-friendly.
     """
-
-    return generate_with_retry(prompt)
+    return generate_with_retry(client, prompt)
 
 
 # Skill Gap Agent
-def skill_gap_agent(resume_text, jobs_text):
-
+def skill_gap_agent(client, resume_text, jobs_text):
     prompt = f"""
     Compare the candidate resume with the target jobs.
 
@@ -95,13 +81,11 @@ def skill_gap_agent(resume_text, jobs_text):
 
     Make the output practical and specific for a fresher / entry-level candidate.
     """
-
-    return generate_with_retry(prompt)
+    return generate_with_retry(client, prompt)
 
 
 # Learning Roadmap Agent
-def learning_roadmap_agent(resume_text, jobs_text):
-
+def learning_roadmap_agent(client, resume_text, jobs_text):
     prompt = f"""
     Based on the candidate resume and the target jobs, create a practical 30-day learning roadmap.
 
@@ -121,15 +105,13 @@ def learning_roadmap_agent(resume_text, jobs_text):
 
     Keep it realistic for a student with limited time.
     """
-
-    return generate_with_retry(prompt)
+    return generate_with_retry(client, prompt)
 
 
 # Embedding Function
-def get_embedding(text):
-
+def get_embedding(client, text):
     response = client.models.embed_content(
-        model="gemini-embedding-001",
+        model=EMBEDDING_MODEL,
         contents=text
     )
 
@@ -138,7 +120,9 @@ def get_embedding(text):
 
 # Cosine Similarity
 def cosine_similarity(vec1, vec2):
+    denominator = np.linalg.norm(vec1) * np.linalg.norm(vec2)
 
-    return np.dot(vec1, vec2) / (
-        np.linalg.norm(vec1) * np.linalg.norm(vec2)
-    )
+    if denominator == 0:
+        return 0.0
+
+    return float(np.dot(vec1, vec2) / denominator)
