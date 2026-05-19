@@ -11,18 +11,18 @@ from agents import (
     cosine_similarity
 )
 
-# -----------------------------
+
 # PAGE CONFIG
-# -----------------------------
+
 st.set_page_config(
     page_title="AI Job Copilot",
-    page_icon="📄",
+    page_icon="AI",
     layout="wide"
 )
 
-# -----------------------------
+
 # LOAD GOOGLE API KEY SAFELY
-# -----------------------------
+
 GOOGLE_API_KEY = None
 
 try:
@@ -37,16 +37,16 @@ if not GOOGLE_API_KEY:
 if GOOGLE_API_KEY:
     os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
-# -----------------------------
+
 # VALIDATE API KEY
-# -----------------------------
+
 if not GOOGLE_API_KEY:
     st.error("Missing GOOGLE_API_KEY. Please set it in Streamlit secrets.")
     st.stop()
 
-# -----------------------------
+
 # HELPER: Extract text from PDF
-# -----------------------------
+
 def extract_text_from_pdf(uploaded_file):
     text = ""
     pdf_reader = PdfReader(uploaded_file)
@@ -58,16 +58,16 @@ def extract_text_from_pdf(uploaded_file):
 
     return text.strip()
 
-# -----------------------------
+
 # UI HEADER
-# -----------------------------
+
 st.title("AI Job Copilot")
 st.subheader("AI Resume Matcher + Skill Gap Detector + Career Coach")
 st.markdown("---")
 
-# -----------------------------
+
 # SIDEBAR
-# -----------------------------
+
 st.sidebar.header("Job Search Settings")
 
 job_query = st.sidebar.text_input(
@@ -84,9 +84,9 @@ st.sidebar.write("- Data Scientist Fresher")
 st.sidebar.markdown("---")
 st.sidebar.info("Upload your resume PDF and get AI-powered job matching + career guidance.")
 
-# -----------------------------
+
 # FILE UPLOAD
-# -----------------------------
+
 st.header("Upload Resume PDF")
 
 uploaded_file = st.file_uploader(
@@ -107,9 +107,9 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Error reading PDF: {str(e)}")
 
-# -----------------------------
+
 # ANALYZE BUTTON
-# -----------------------------
+
 analyze_button = st.button("Analyze Resume & Build Career Plan")
 
 if analyze_button:

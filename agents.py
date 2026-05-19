@@ -1,27 +1,22 @@
 import os
 import time
 import numpy as np
-from google import genai
+import google.generativeai as genai
 
-MODEL = "gemini-2.5-flash"
+# Configure Gemini API
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-
-def get_client():
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        raise ValueError("GOOGLE_API_KEY is missing. Please set it in Streamlit secrets.")
-    return genai.Client(api_key=api_key)
+# Load Gemini model
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 
+# Retry wrapper
 def generate_with_retry(prompt):
     for attempt in range(3):
         try:
-            client = get_client()
-            response = client.models.generate_content(
-                model=MODEL,
-                contents=prompt
-            )
+            response = model.generate_content(prompt)
             return response.text
+
         except Exception as e:
             print(f"Gemini call failed (attempt {attempt+1}/3): {e}")
             time.sleep(2)
@@ -29,6 +24,7 @@ def generate_with_retry(prompt):
     return "Model unavailable right now. Please try again later."
 
 
+# Search agent
 def search_agent(query):
     prompt = f"""
     Find 3 realistic Data Science / Machine Learning jobs in India for:
@@ -44,9 +40,11 @@ def search_agent(query):
 
     Keep it clean and readable.
     """
+
     return generate_with_retry(prompt)
 
 
+# Resume analysis
 def resume_agent(resume_text):
     prompt = f"""
     Analyze this resume and extract:
@@ -62,9 +60,11 @@ def resume_agent(resume_text):
 
     Keep the response structured and recruiter-friendly.
     """
+
     return generate_with_retry(prompt)
 
 
+# Skill gap detector
 def skill_gap_agent(resume_text, jobs_text):
     prompt = f"""
     Compare the candidate resume with the target jobs.
@@ -75,21 +75,23 @@ def skill_gap_agent(resume_text, jobs_text):
     TARGET JOBS:
     {jobs_text}
 
-    Give a structured response with:
-    1. Top matching skills
-    2. Missing skills / skill gaps
-    3. Important tools/technologies missing
+    Give:
+    1. Matching skills
+    2. Missing skills
+    3. Important tools missing
     4. Resume improvement suggestions
-    5. Priority order of what to learn first
+    5. Learning priorities
 
-    Make the output practical and specific for a fresher / entry-level candidate.
+    Keep it practical for freshers.
     """
+
     return generate_with_retry(prompt)
 
 
+# Learning roadmap
 def learning_roadmap_agent(resume_text, jobs_text):
     prompt = f"""
-    Based on the candidate resume and the target jobs, create a practical 30-day learning roadmap.
+    Based on the resume and target jobs, create a practical 30-day roadmap.
 
     RESUME:
     {resume_text}
@@ -97,38 +99,43 @@ def learning_roadmap_agent(resume_text, jobs_text):
     TARGET JOBS:
     {jobs_text}
 
-    Provide:
-    1. Week 1 focus
-    2. Week 2 focus
-    3. Week 3 focus
-    4. Week 4 focus
-    5. Best projects to build
-    6. Resume update suggestions after learning
+    Include:
+    1. Week 1
+    2. Week 2
+    3. Week 3
+    4. Week 4
+    5. Projects to build
+    6. Resume improvements
 
-    Keep it realistic for a student with limited time.
+    Keep it realistic for students.
     """
+
     return generate_with_retry(prompt)
 
 
+# Embedding function
 def get_embedding(text):
     try:
-        client = get_client()
-        response = client.models.embed_content(
-            model="gemini-embedding-001",
-            contents=text
+        result = genai.embed_content(
+            model="models/gemini-embedding-001", # Updated to the current model
+            content=text
         )
-        return np.array(response.embeddings[0].values)
+        
+        return np.array(result["embedding"])
     except Exception as e:
         print(f"Embedding failed: {e}")
         return None
 
 
+# Cosine similarity
 def cosine_similarity(vec1, vec2):
+
     if vec1 is None or vec2 is None:
         return 0.0
 
-    denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
-    if denom == 0:
+    denominator = np.linalg.norm(vec1) * np.linalg.norm(vec2)
+
+    if denominator == 0:
         return 0.0
 
-    return np.dot(vec1, vec2) / denom
+    return np.dot(vec1, vec2) / denominator
