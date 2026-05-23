@@ -1,3 +1,4 @@
+> ⚡ **v2 is now available!** → [AI Job Copilot v2](https://github.com/ShivenSiwach/AI-Job-Copilot-v2)
 # AI Job Copilot: Agentic AI Resume Matcher and Job Recommender
 
 AI Job Copilot is an AI-powered career intelligence application designed to help users analyze resumes, match them against job descriptions, identify skill gaps, and generate personalized learning roadmaps.
